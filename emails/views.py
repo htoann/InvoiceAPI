@@ -1,55 +1,74 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
-from .forms import CustomUserCreationForm, EmailLoginForm
-import imaplib
-import email
+from django.http import HttpResponse
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from django.conf import settings
+import os
+import pathlib
+import pickle
+import google.oauth2.credentials
 
-def register(request):
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('login')
-    else:
-        form = CustomUserCreationForm()
-    return render(request, 'register.html', {'form': form})
+# Load OAuth 2.0 Client ID JSON
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Chỉ sử dụng trong phát triển
+CLIENT_SECRETS_FILE = os.path.join(pathlib.Path(__file__).parent, 'client_secret.json')
 
-def email_login(request):
-    if request.method == 'POST':
-        form = EmailLoginForm(request.POST)
-        if form.is_valid():
-            email_address = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            try:
-                mail = imaplib.IMAP4_SSL('imap.gmail.com')
-                mail.login(email_address, password)
-                request.session['email'] = email_address
-                request.session['password'] = password
-                return redirect('inbox')
-            except imaplib.IMAP4.error:
-                form.add_error(None, 'Failed to login to email server. Please check your email and password or use an app-specific password.')
-    else:
-        form = EmailLoginForm()
-    return render(request, 'email_login.html', {'form': form})
+# Scopes
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+# Flow
+flow = Flow.from_client_secrets_file(
+    CLIENT_SECRETS_FILE,
+    scopes=SCOPES,
+    redirect_uri='http://localhost:8000/emails/oauth2callback'
+)
+
+def index(request):
+    return render(request, 'index.html')
+
+def oauth2_login(request):
+    authorization_url, state = flow.authorization_url()
+    request.session['state'] = state
+    return redirect(authorization_url)
+
+def oauth2_callback(request):
+    flow.fetch_token(authorization_response=request.build_absolute_uri())
+    credentials = flow.credentials
+    request.session['credentials'] = credentials_to_dict(credentials)
+    return redirect('inbox')
 
 def inbox(request):
-    email_address = request.session.get('email')
-    password = request.session.get('password')
-    if not email_address or not password:
-        return redirect('email_login')
-    mail = imaplib.IMAP4_SSL('imap.gmail.com')
-    mail.login(email_address, password)
-    mail.select('inbox')
-    result, data = mail.search(None, 'ALL')
-    mail_ids = data[0].split()
+    if 'credentials' not in request.session:
+        return redirect('oauth2_login')
+
+    credentials = google.oauth2.credentials.Credentials(
+        **request.session['credentials'])
+
+    service = build('gmail', 'v1', credentials=credentials)
+
+    results = service.users().messages().list(userId='me', labelIds=['INBOX'], maxResults=10).execute()
+    messages = results.get('messages', [])
+
     emails = []
-    for mail_id in mail_ids:
-        result, message_data = mail.fetch(mail_id, '(RFC822)')
-        raw_email = message_data[0][1]
-        msg = email.message_from_bytes(raw_email)
+    for message in messages:
+        msg = service.users().messages().get(userId='me', id=message['id']).execute()
+        payload = msg.get('payload', {})
+        headers = payload.get('headers', [])
+        email_data = {header['name']: header['value'] for header in headers}
         emails.append({
-            'subject': msg['subject'],
-            'from': msg['from'],
-            'date': msg['date']
+            'subject': email_data.get('Subject'),
+            'from': email_data.get('From'),
+            'date': email_data.get('Date')
         })
+
+    request.session['credentials'] = credentials_to_dict(credentials)
     return render(request, 'inbox.html', {'emails': emails})
+
+def credentials_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
