@@ -69,7 +69,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = ['api.wsgi.app', 'email_reader.wsgi.application']
+WSGI_APPLICATION = 'email_reader.wsgi.application'
 
 
 # Database
