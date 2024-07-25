@@ -10,3 +10,6 @@ class CustomUserCreationForm(UserCreationForm):
 class EmailLoginForm(forms.Form):
     email = forms.EmailField()
     password = forms.CharField(widget=forms.PasswordInput)
+
+class AddAccountForm(forms.Form):
+    email = forms.EmailField(label='Email Address', max_length=100)

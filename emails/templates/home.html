@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Home</title>
+  </head>
+  <body>
+    <h1>My Email Accounts</h1>
+    <a href="{% url 'add_account' %}">Add Account</a>
+    <a href="{% url 'list_emails' %}">View Emails from All Accounts</a>
+    <ul>
+      {% for account in user_accounts %}
+      <li>{{ account.email }}</li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>

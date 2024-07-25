@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Email List</title>
+  </head>
+  <body>
+    <h1>Email List</h1>
+
+    {% for account in all_emails %}
+    <h2>Account: {{ account.account }}</h2>
+
+    <h3>Primary Emails</h3>
+    <ul>
+      {% for email in account.emails_by_type.primary %}
+      <li>
+        <strong>Subject:</strong> {{ email.subject }}<br />
+        <strong>From:</strong> {{ email.from }}<br />
+        <strong>Date:</strong> {{ email.date }}
+      </li>
+      {% empty %}
+      <li>No primary emails found.</li>
+      {% endfor %}
+    </ul>
+
+    <h3>Spam Emails</h3>
+    <ul>
+      {% for email in account.emails_by_type.spam %}
+      <li>
+        <strong>Subject:</strong> {{ email.subject }}<br />
+        <strong>From:</strong> {{ email.from }}<br />
+        <strong>Date:</strong> {{ email.date }}
+      </li>
+      {% empty %}
+      <li>No spam emails found.</li>
+      {% endfor %}
+    </ul>
+
+    <h3>Promotions Emails</h3>
+    <ul>
+      {% for email in account.emails_by_type.promotions %}
+      <li>
+        <strong>Subject:</strong> {{ email.subject }}<br />
+        <strong>From:</strong> {{ email.from }}<br />
+        <strong>Date:</strong> {{ email.date }}
+      </li>
+      {% empty %}
+      <li>No promotions emails found.</li>
+      {% endfor %}
+    </ul>
+
+    {% endfor %}
+  </body>
+</html>
