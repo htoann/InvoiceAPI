@@ -81,7 +81,7 @@ def list_emails(request):
         
         # Define search queries for different email types
         queries = {
-            'primary': 'in:inbox -label:spam -label:trash -label:promotions',
+            'primary': 'category:primary in:inbox',
             'spam': 'label:spam',
             'promotions': 'label:promotions'
         }
