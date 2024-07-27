@@ -4,7 +4,13 @@ import json
 from google.oauth2.credentials import Credentials
 from django.conf import settings
 
+from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
 class CustomUser(AbstractUser):
+    permission_classes = [AllowAny]
+
     email_password = models.CharField(max_length=100)
     groups = models.ManyToManyField(
         Group,
@@ -21,31 +27,18 @@ class CustomUser(AbstractUser):
         related_query_name='customuser',
     )
 
-class UserCredentials(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+class MailAccount(models.Model):
+    name = models.TextField()
     email = models.EmailField()
-    credentials = models.TextField()  # Lưu thông tin xác thực dưới dạng JSON
+    credentials = models.JSONField() 
 
     def get_credentials(self):
-        credentials_dict = json.loads(self.credentials)
-        creds = Credentials(
-            token=credentials_dict['token'],
-            refresh_token=credentials_dict['refresh_token'],
-            token_uri=credentials_dict['token_uri'],
-            client_id=credentials_dict['client_id'],
-            client_secret=credentials_dict['client_secret'],
-            scopes=credentials_dict['scopes']
-        )
-        return creds
+        return Credentials(**self.credentials)
 
-    def save_credentials(self, creds):
-        creds_json = json.dumps({
-            'token': creds.token,
-            'refresh_token': creds.refresh_token,
-            'token_uri': creds.token_uri,
-            'client_id': creds.client_id,
-            'client_secret': creds.client_secret,
-            'scopes': creds.scopes
-        })
-        self.credentials = creds_json
-        self.save()
+
+class MailInbox(models.Model):
+    mail_account = models.ForeignKey(MailAccount, on_delete=models.CASCADE)
+    subject = models.TextField()
+    sender = models.TextField()
+    date = models.DateTimeField()
+    label = models.TextField()
