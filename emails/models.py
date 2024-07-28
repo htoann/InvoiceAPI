@@ -30,15 +30,13 @@ class CustomUser(AbstractUser):
 class MailAccount(models.Model):
     name = models.TextField()
     email = models.EmailField()
-    credentials = models.JSONField() 
-
-    def get_credentials(self):
-        return Credentials(**self.credentials)
+    password = models.TextField()
 
 
 class MailInbox(models.Model):
-    mail_account = models.ForeignKey(MailAccount, on_delete=models.CASCADE)
+    mail_account = models.ForeignKey(MailAccount, related_name='inboxes', on_delete=models.CASCADE)
     subject = models.TextField()
     sender = models.TextField()
     date = models.DateTimeField()
     label = models.TextField()
+    body = models.TextField()
