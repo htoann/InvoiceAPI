@@ -5,7 +5,6 @@ from typing import List
 
 from email.header import decode_header
 
-
 MAIL_SERVER = 'imap.gmail.com'
 
 class EmailService:
