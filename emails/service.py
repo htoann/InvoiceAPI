@@ -3,7 +3,6 @@ import imaplib
 import email
 from typing import List
 
-from emails.models import MailInbox
 from email.header import decode_header
 
 
