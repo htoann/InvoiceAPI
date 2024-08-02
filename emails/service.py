@@ -1,11 +1,12 @@
+import os
 import datetime
 import imaplib
 import email
 from typing import List
-
 from email.header import decode_header
 
 MAIL_SERVER = 'imap.gmail.com'
+ATTACHMENTS_DIR = 'attachments'  # Định nghĩa thư mục lưu trữ tệp đính kèm
 
 class EmailService:
     @classmethod
@@ -45,13 +46,32 @@ class EmailService:
                         subject = subject.decode(encoding if encoding else 'utf-8')
                     
                     body = ""
+                    attachments = []
 
                     if message.is_multipart():
                         for part in message.walk():
-                            if part.get_content_type() == 'text/html':
+                            # Trích xuất nội dung
+                            if part.get_content_type() == 'text/html' and 'attachment' not in part.get('Content-Disposition', ''):
                                 payload = part.get_payload(decode=True)
                                 if payload:
                                     body += payload.decode()
+
+                            # Trích xuất tệp đính kèm
+                            if part.get('Content-Disposition') and 'attachment' in part.get('Content-Disposition'):
+                                filename = part.get_filename()
+                                if filename:
+                                    decoded_filename, encoding = decode_header(filename)[0]
+                                    if isinstance(decoded_filename, bytes):
+                                        filename = decoded_filename.decode(encoding if encoding else 'utf-8')
+
+                                    # Tạo thư mục nếu chưa tồn tại
+                                    if not os.path.exists(ATTACHMENTS_DIR):
+                                        os.makedirs(ATTACHMENTS_DIR)
+
+                                    filepath = os.path.join(ATTACHMENTS_DIR, filename)
+                                    with open(filepath, 'wb') as f:
+                                        f.write(part.get_payload(decode=True))
+                                    attachments.append(filepath)
                     else:
                         payload = message.get_payload(decode=True)
                         if payload:
