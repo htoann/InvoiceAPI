@@ -58,19 +58,8 @@ class EmailService:
 
                             # Trích xuất tệp đính kèm
                             if part.get('Content-Disposition') and 'attachment' in part.get('Content-Disposition'):
-                                filename = part.get_filename()
-                                if filename:
-                                    decoded_filename, encoding = decode_header(filename)[0]
-                                    if isinstance(decoded_filename, bytes):
-                                        filename = decoded_filename.decode(encoding if encoding else 'utf-8')
-
-                                    # Tạo thư mục nếu chưa tồn tại
-                                    if not os.path.exists(ATTACHMENTS_DIR):
-                                        os.makedirs(ATTACHMENTS_DIR)
-
-                                    filepath = os.path.join(ATTACHMENTS_DIR, filename)
-                                    with open(filepath, 'wb') as f:
-                                        f.write(part.get_payload(decode=True))
+                                filepath = cls.save_attachment(part)
+                                if filepath:
                                     attachments.append(filepath)
                     else:
                         payload = message.get_payload(decode=True)
@@ -91,3 +80,30 @@ class EmailService:
         mail.logout()
 
         return inbox_list
+
+    @classmethod
+    def save_attachment(cls, part):
+        """
+        Lưu tệp đính kèm từ một phần của email.
+
+        Args:
+            part (email.message.Message): Phần chứa tệp đính kèm.
+
+        Returns:
+            str: Đường dẫn đến tệp đính kèm đã được lưu hoặc None nếu không lưu được.
+        """
+        filename = part.get_filename()
+        if filename:
+            decoded_filename, encoding = decode_header(filename)[0]
+            if isinstance(decoded_filename, bytes):
+                filename = decoded_filename.decode(encoding if encoding else 'utf-8')
+
+            # Tạo thư mục nếu chưa tồn tại
+            if not os.path.exists(ATTACHMENTS_DIR):
+                os.makedirs(ATTACHMENTS_DIR)
+
+            filepath = os.path.join(ATTACHMENTS_DIR, filename)
+            with open(filepath, 'wb') as f:
+                f.write(part.get_payload(decode=True))
+            return filepath
+        return None
